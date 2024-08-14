@@ -1,5 +1,4 @@
-MIT License
-
+/* 
 Copyright (c) 2024  NickelAnge.Studio 
 Email               mathieu.grenier@nickelange.studio
 Git                 https://github.com/NickelAngeStudio/nsfcb
@@ -21,3 +20,43 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+*/
+
+
+super::fcb_generic!(FixedCRB, 15);
+super::fcb_generic!(pub(crate), FixedCRB2, 15);
+    super::ring!(FixedDouble, f64, 10);
+    super::ring!(@unchecked(u8) FixedDouble2, f64);
+    super::manx_generic!(GenManx, 15);
+    super::manx!(Manx, u8, 50);
+ 
+    pub struct Blabla {
+        
+    }
+
+    #[test]
+    fn test_add() {
+        let mut a : FixedCRB<usize> = FixedCRB::new();
+        let aa : FixedCRB2<usize> = FixedCRB2::new();
+        let b  = FixedDouble::new();
+        let c : GenManx<u32> = GenManx::new();
+        let d = Manx::new();
+
+        let bb = 55;
+        a.push(bb);
+
+        println!("bb={}", bb);
+
+        
+    }
+
+/*
+#[cfg(test)]
+mod tests {
+
+    
+
+
+
+}
+*/
