@@ -1,10 +1,15 @@
+#![no_std]
+#![doc(html_logo_url = "https://avatars.githubusercontent.com/u/67743099?v=4")]
+#![doc(html_favicon_url = "https://avatars.githubusercontent.com/u/67743099?v=4")]
+
+
 // Enable experimental features for documentation.
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 /* 
 Copyright (c) 2024  NickelAnge.Studio 
 Email               mathieu.grenier@nickelange.studio
-Git                 https://github.com/NickelAngeStudio/nsring
+Git                 https://github.com/NickelAngeStudio/nsrb
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,379 +30,191 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-//! Nifty Simple Ring Buffer (aka circular buffer) provides macros to rapidly create
+//! Nifty Simple Ring Buffer (aka circular buffer) is a [`no_std`](https://docs.rust-embedded.org/book/intro/no-std.html) crate that provides the [`ring!`] and [`manx!`] macros to easily create
 //! circular buffer data structure on the stack.
 //! 
-//! It also provides ([Manx buffer](https://www.approxion.com/circular-adventures-ix-the-poor-ring-buffer-that-had-no-tail/)),  
-//! a no tail buffer for rapid data accumulation.
-//! 
-//! 
-//! # Reference(s)
-//! - [Manx buffer](https://www.approxion.com/circular-adventures-ix-the-poor-ring-buffer-that-had-no-tail/)
-//! 
-//!
-//! 
-//! 
-//! ### Usage 
+//! ### Example 
 //! ```
-//! ##[macro_use] extern crate nsring;
+//! // Import crate with #[macro_use] 
+//! ##[macro_use] extern crate nsrb;
 //! 
-//! nsring::ring!(UsizeRB, usize, 10); // Use macro to circular buffer structure.
+//! // Use ring! macro to create circular buffer structure.
+//! nsrb::ring!(pub(crate) ExampleRB[usize; 10]); 
+//! 
+//! // You can implement and access buffer inner variables if needed.
+//! impl ExampleRB {
+//!     pub fn head(&self) -> usize {
+//!         self.head
+//!     }
+//! }
 //! 
 //! fn main() {
-//!     let mut rb = UsizeRB::new();
+//!     // Use struct in code.
+//!     let mut rb = ExampleRB::new();
 //!     rb.push(5);
 //!     assert_eq!(*rb.pop().unwrap(), 5);
+//!     assert_eq!(rb.head(), 1);   // Using newly implemented method.
 //! }
 //! ``````
-//! 
-//! 
+
+/// Smallest size a ring buffer can be. Default : 2.
+/// 
+/// Can be removed via the `no_limit` feature.
+pub const NSRB_LOWER_LIMIT : usize = 2;
+
+/// Largest size a ring buffer can be. Default : [u16::MAX].
+/// 
+/// Can be removed via the `no_limit` feature.
+pub const NSRB_UPPER_LIMIT : usize = u16::MAX as usize;
+
+#[doc(hidden)]
+pub mod ring;
+
+#[doc(hidden)]
+mod manx;
+
+/*
+//! You can also create [optimized](https://en.wikipedia.org/wiki/Circular_buffer#Optimization) 
+//! [unchecked](https://doc.rust-lang.org/beta/book/ch03-02-data-types.html#integer-overflow) [u8] / [u16] [`ring!`] 
+//! and [`manx!`] buffer if performance is needed by using the `@unchecked(u8)` and `@unchecked(u16)` 
+//! modifiers. Refer to each macro documentation for more information.
+*/
 
 
-/// nsring Unit tests
-#[cfg(test)]
-pub(crate) mod tests {
-    include!("tests.rs");
-}
-
-/// Create a fixed ring buffer for specific type.
-/// 
-/// ## Usage
-/// 
-/// ## Implementations
-/// #### `$name::new()`
-/// Create a new instance of `$name` fixed circular buffer.
-/// 
-/// #### `$name::push(element : $type)`
-/// Push an element into `$name` circular buffer.
-/// 
-/// #### `$name::pop() -> Option<&$type>`
-/// Returns Some(&$type) if buffer contains a new element.
-/// 
-/// #### `$name::clear()`
-/// Clear the buffer (doesn't clear elements values)
+/*
 #[macro_export]
 macro_rules! ring {
     ($name : ident, $type : ty, $size : expr) => {
-        $crate::ring_core!(,$name, $type,$size);
+        $crate::ring_core!(,$name, $type,$size,);
+    };
+    ($name : ident, $type : ty, $size : expr, $header : meta) => {
+        $crate::ring_core!(,$name, $type,$size,$header);
     };
     ($visibility : vis, $name : ident, $type : ty, $size : expr) => {
-        $crate::ring_core!($visibility,$name, $type,$size);
+        $crate::ring_core!($visibility,$name, $type,$size,);
     };
+    ($visibility : vis, $name : ident, $type : ty, $size : expr, $header : meta) => {
+        $crate::ring_core!($visibility,$name, $type,$size,$header);
+    };
+    
     (@unchecked(u8) $name : ident, $type : ty) =>{
         $crate::ring_core!(@unchecked(u8) ,$name, $type);
     };
+    (@unchecked(u8) $name : ident, $type : ty, $header : meta) =>{
+        $crate::ring_core!(@unchecked(u8) ,$name, $type);
+    };
+    (@unchecked(u8) $visibility : vis, $name : ident, $type : ty) =>{
+        $crate::ring_core!(@unchecked(u8) ,$name, $type);
+    };
+    (@unchecked(u8) $visibility : vis, $name : ident, $type : ty, $header : meta) =>{
+        $crate::ring_core!(@unchecked(u8) ,$name, $type);
+    };
+    
     (@unchecked(u16) $name : ident, $type : ty) =>{
+        $crate::ring_core!(@unchecked(u16) ,$name, $type);
+    };
+    (@unchecked(u16) $name : ident, $type : ty, $header : meta) =>{
+        $crate::ring_core!(@unchecked(u16) ,$name, $type);
+    };
+    (@unchecked(u16) $visibility : vis, $name : ident, $type : ty) =>{
+        $crate::ring_core!(@unchecked(u16) ,$name, $type);
+    };
+    (@unchecked(u16) $visibility : vis, $name : ident, $type : ty, $header : meta) =>{
         $crate::ring_core!(@unchecked(u16) ,$name, $type);
     };
 }
 
-/// Core code of ring! macro.
-/// Not meant to be called directly hence hidden from documentation.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! ring_core {
-    ($visibility : vis, $name : ident, $type : ty, $size : expr) => {
-        #[allow(dead_code)]
-        $visibility struct $name { tail : usize, head : usize, buffer : [$type; $size], }
-
-        #[allow(dead_code)]
-        impl $name {
-            pub fn new() -> $name {
-                $name {
-                    tail: 0,
-                    head: 0,
-                    buffer: [<$type>::default(); $size],
-                }
-            }
-
-            /// Push an element into the fixed circular buffer.
-            #[inline(always)]
-            pub fn push(&mut self, element : $type) {
-                self.buffer[self.head] = element;
-                self.push_head();
-            }
-
-            /// Get refence to oldest unpop [Log] entry.
-            /// 
-            /// Returns Some([LogEntry]) is there are new [LogEntry], None if no entry.
-            #[inline(always)]
-            pub fn pop(&mut self) -> Option<&$type> {
-                
-                if self.tail != self.head {
-                    let tail = self.tail;   // Keep tail in memory before pushing
-                    self.push_tail();
-                    Some(&self.buffer[tail])
-                } else {    // No entries in the circular buffer.
-                    None
-                }
-            }
-
-            /// Push the head of the circular buffer. Head will push the tail if it ends
-            /// up being equal.
-            #[inline(always)]
-            fn push_head(&mut self) {
-
-                if self.head >= $size - 1 {
-                    self.head = 0;  // Put head to the back of the buffer.
-                } else {
-                    self.head += 1; // Increment head.
-                }
-
-                // Push tail if equal
-                if self.head == self.tail {
-                    self.push_tail();
-                }
-
-            }
-
-            /// Push the tail forward in the circular buffer.
-            /// Tail will NEVER push the head.
-            #[inline(always)]
-            fn push_tail(&mut self) {
-                if self.tail >= $size - 1 {
-                    self.tail = 0;  // Put tail to the back of the buffer.
-                } else {
-                    self.tail += 1; // Increment tail.
-                }
-            }
-
-            
-
-            /// Clear the fixed circular buffer.
-            pub fn clear(&mut self) {
-                self.tail = self.head;
-            }
-
-        }   
-    };
-    (@unchecked($size_type : ty) $visibility : vis, $name : ident, $type : ty) =>{
-        #[allow(dead_code)]
-        $visibility struct $name {
-            tail : u8,
-            head : u8,
-            buffer : [$type; <$size_type>::MAX as usize],
-        }
-
-        #[allow(dead_code)]
-        impl $name {
-            pub fn new() -> $name {
-                $name {
-                    tail: 0,
-                    head: 0,
-                    buffer: [<$type>::default(); <$size_type>::MAX as usize],
-                }
-            }
-
-            #[inline(always)]
-            pub fn push(&mut self, element : $type) {
-                self.buffer[self.head as usize] = element;
-                self.head += 1;
-                if self.head == self.tail {
-                    self.tail += 1;
-                }
-            }
-
-            #[inline(always)]
-            pub fn pop(&mut self) -> Option<&$type> {
-                if self.tail != self.head {
-                    let tail = self.tail;
-                    self.tail += 1;
-                    Some(&self.buffer[tail as usize])
-                } else {
-                    None
-                }
-            }
-            
-            pub fn clear(&mut self) {
-                self.tail = self.head;
-            }
-        }   
-    };
-}
-
-
-/// Create a [generic](https://doc.rust-lang.org/book/ch10-01-syntax.html) circular buffer reusable with multiple types.
-#[macro_export]
-macro_rules! fcb_generic {
-    ($name : ident, $size : expr) => {
-        crate::fcb_generic!(,$name, $size);
-    };
-    ($visibility : vis, $name : ident, $size : expr) => {
-        #[allow(dead_code)]
-        $visibility struct $name<T> {
-            tail : usize,
-            head : usize,
-            buffer : [T; $size],
-        }
-
-        #[allow(dead_code)]
-        impl<T : Copy + Default> $name<T> {
-            pub fn new() -> $name<T> {
-                $name {
-                    tail: 0,
-                    head: 0,
-                    buffer: [T::default(); $size],
-                }
-            }
-
-            /// Push an element into the fixed circular buffer.
-            #[inline(always)]
-            pub fn push(&mut self, element : T) {
-                self.buffer[self.head] = element;
-                self.push_head();
-            }
-
-            /// Get refence to oldest unpop [Log] entry.
-            /// 
-            /// Returns Some([LogEntry]) is there are new [LogEntry], None if no entry.
-            #[inline(always)]
-            pub fn pop(&mut self) -> Option<&T> {
-                
-                if self.tail != self.head {
-                    let tail = self.tail;   // Keep tail in memory before pushing
-                    self.push_tail();
-                    Some(&self.buffer[tail])
-                } else {    // No entries in the circular buffer.
-                    None
-                }
-            }
-
-            /// Push the head of the circular buffer. Head will push the tail if it ends
-            /// up being equal.
-            #[inline(always)]
-            fn push_head(&mut self) {
-
-                if self.head >= $size - 1 {
-                    self.head = 0;  // Put head to the back of the buffer.
-                } else {
-                    self.head += 1; // Increment head.
-                }
-
-                // Push tail if equal
-                if self.head == self.tail {
-                    self.push_tail();
-                }
-
-            }
-
-            /// Push the tail forward in the circular buffer.
-            /// Tail will NEVER push the head.
-            #[inline(always)]
-            fn push_tail(&mut self) {
-                if self.tail >= $size - 1 {
-                    self.tail = 0;  // Put tail to the back of the buffer.
-                } else {
-                    self.tail += 1; // Increment tail.
-                }
-            }
-
-            
-
-            /// Clear the fixed circular buffer.
-            pub fn clear(&mut self) {
-                self.tail = self.head;
-            }
-
-        }   
-    }
-
-}
+//ring!(pub, Toto, usize, 10, derive(Debug));
 
 /// Create a [manx](https://www.approxion.com/circular-adventures-ix-the-poor-ring-buffer-that-had-no-tail/) 
-/// circular buffer for a single type.
+/// buffer. See [`manx syntax`](macro.manx.html#syntax) for usage.
 #[macro_export]
 macro_rules! manx {
     ($name : ident, $type : ty, $size : expr) => {
-        #[allow(dead_code)]
-        pub struct $name {
-            pub index : usize,
-            buffer : [$type; $size],
-        }
-
-        #[allow(dead_code)]
-        impl $name {
-            pub fn new() -> $name {
-                $name {
-                    index: 0,
-                    buffer: [<$type>::default(); $size],
-                }
-            }
-
-            /// Push an element into the fixed circular buffer.
-            #[inline(always)]
-            pub fn push(&mut self, element : $type) {
-                self.buffer[self.index] = element;
-                if self.index >= $size - 1 {
-                    self.index = 0;
-                } else {
-                    self.index += 1;
-                }
-            }
-
-            #[inline(always)]
-            fn buffer(&self) -> &[$type; $size] {
-                &self.buffer
-            }
-
-            #[inline(always)]
-            fn buffer_mut(&self) -> &[$type; $size] {
-                &self.buffer
-            }
-
-
-
-            /// Push the head of the circular buffer. Head will push the tail if it ends
-            /// up being equal.
-            #[inline(always)]
-            fn push_index(&mut self) {
-                
-            }
-
-            
-
-        }   
-    }
-
+        $crate::manx_core!(,$name, $type,$size);
+    };
+    ($visibility : vis, $name : ident, $type : ty, $size : expr) => {
+        $crate::manx_core!($visibility,$name, $type,$size);
+    };
+    (@unchecked(u8) $name : ident, $type : ty) =>{
+        $crate::manx_core!(@unchecked(u8) ,$name, $type);
+    };
+    (@unchecked(u16) $name : ident, $type : ty) =>{
+        $crate::manx_core!(@unchecked(u16) ,$name, $type);
+    };
 }
 
+ring2!(Toto[usize; 10]);
+ring2!(pub(crate) Toto2[usize; 10]);
+ring2!(#[derive(Debug)] Toto3[usize; 10]);
+ring2!(pub(crate) Toto4[usize; 10]);
+ring2!{ #[doc="Foo"] 
+        #[derive(Debug,Copy,Clone)] 
+        pub Toto5[usize; 10] }
 
-/// Create a [generic](https://doc.rust-lang.org/book/ch10-01-syntax.html) [manx](https://www.approxion.com/circular-adventures-ix-the-poor-ring-buffer-that-had-no-tail/) 
-/// circular buffer reusable with multiple types.
+ring2!(@unchecked(u8) Toto7[usize]);
+
+ring2!{ @unchecked(u8) #[doc="Foo"] 
+        #[derive(Debug,Copy,Clone)] 
+        pub Toto8[usize] }
+
 #[macro_export]
-macro_rules! manx_generic {
-    ($name : ident, $size : expr) => {
+macro_rules! ring2 {
+    /*
+    ($name : ident, $type : ty, $size : expr) => {
+        $crate::ring_core!(,$name, $type,$size,);
+    };
+    ($name : ident, $type : ty, $size : expr, $header : meta) => {
+        $crate::ring_core!(,$name, $type,$size,$header);
+    };
+    ($visibility : vis, $name : ident, $type : ty, $size : expr) => {
+        $crate::ring_core!($visibility,$name, $type,$size,);
+    };
+    */
+    ($(#[$attr:meta])* $visibility : vis $name : ident[$type : ty; $size : expr]) => {
+        //$crate::ring_core!($visibility,$name, $type,$size,$header);
+        $(
+            #[$attr]
+        )*
         #[allow(dead_code)]
-        pub struct $name<T> {
-            pub index : usize,
-            buffer : [T; $size],
-        }
+        $visibility struct $name { tail : usize, head : usize, buffer : [$type; $size], }
+    };
 
+    (@unchecked(u8) $(#[$attr:meta])* $visibility : vis $name : ident[$type : ty]) => {
+        //$crate::ring_core!($visibility,$name, $type,$size,$header);
+        $(
+            #[$attr]
+        )*
         #[allow(dead_code)]
-        impl<T : Copy + Default> $name<T> {
-            pub fn new() -> $name<T> {
-                $name {
-                    index: 0,
-                    buffer: [T::default(); $size],
-                }
-            }
-
-            #[inline(always)]
-            pub fn push(&mut self, element : T) {
-                self.buffer[self.index] = element;
-                if self.index >= $size - 1 { self.index = 0; } else { self.index += 1; }
-            }
-
-            #[inline(always)]
-            fn buffer(&self) -> &[T; $size] {
-                &self.buffer
-            }
-
-            #[inline(always)]
-            fn buffer_mut(&self) -> &[T; $size] {
-                &self.buffer
-            }
-        }   
-    }
-
+        $visibility struct $name { tail : usize, head : usize, buffer : [$type; u8::MAX as usize], }
+    };
+    
+    
+    (@unchecked(u8) $name : ident, $type : ty) =>{
+        $crate::ring_core!(@unchecked(u8) ,$name, $type);
+    };
+    (@unchecked(u8) $name : ident, $type : ty, $header : meta) =>{
+        $crate::ring_core!(@unchecked(u8) ,$name, $type);
+    };
+    (@unchecked(u8) $visibility : vis, $name : ident, $type : ty) =>{
+        $crate::ring_core!(@unchecked(u8) ,$name, $type);
+    };
+    (@unchecked(u8) $visibility : vis, $name : ident, $type : ty, $header : meta) =>{
+        $crate::ring_core!(@unchecked(u8) ,$name, $type);
+    };
+    
+    (@unchecked(u16) $name : ident, $type : ty) =>{
+        $crate::ring_core!(@unchecked(u16) ,$name, $type);
+    };
+    (@unchecked(u16) $name : ident, $type : ty, $header : meta) =>{
+        $crate::ring_core!(@unchecked(u16) ,$name, $type);
+    };
+    (@unchecked(u16) $visibility : vis, $name : ident, $type : ty) =>{
+        $crate::ring_core!(@unchecked(u16) ,$name, $type);
+    };
+    (@unchecked(u16) $visibility : vis, $name : ident, $type : ty, $header : meta) =>{
+        $crate::ring_core!(@unchecked(u16) ,$name, $type);
+    };
+    
 }
+*/

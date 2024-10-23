@@ -1,7 +1,14 @@
 [package]
-name = "nsring"
-version = "0.1.0"
+name = "nsrb"
+version = "1.0.0"
 edition = "2021"
+authors = ["NickelAnge.Studio <rust@nickelange.studio>"]
+description = "Nifty Simple Ring Buffer (aka circular buffer) is a no_std library that provides 2 macros to easily create fixed circular buffer on the stack."
+license = "MIT"
+repository = "https://github.com/NickelAngeStudio/nsrb"
+keywords = ["buffer", "circular", "ring", "no_std", "manx"]
+categories = ["data-structures", "no-std"]
+readme = "README.md"
 
 # List of excluded files
 exclude = [
@@ -15,6 +22,10 @@ exclude = [
     ".github/*",
     ".gitignore",
 ]
+
+[features]
+# Remove buffer limit of u16::MAX
+no_limit = []
 
 [dependencies]
 
