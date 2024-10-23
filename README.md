@@ -1,3 +1,7 @@
+[![ubuntu-latest](https://github.com/NickelAngeStudio/nsrb/actions/workflows/ubuntu-latest.yml/badge.svg)](https://github.com/NickelAngeStudio/nsrb/actions/workflows/ubuntu-latest.yml)
+[![windows-latest](https://github.com/NickelAngeStudio/nsrb/actions/workflows/windows-latest.yml/badge.svg?branch=main)](https://github.com/NickelAngeStudio/nsrb/actions/workflows/windows-latest.yml)
+[![macos-latest](https://github.com/NickelAngeStudio/nsrb/actions/workflows/macos-latest.yml/badge.svg?branch=main)](https://github.com/NickelAngeStudio/nsrb/actions/workflows/macos-latest.yml)
+
 # nsrb
 Nifty Simple Ring Buffer (aka circular buffer) is a no_std library that provides 2 macros to easily create fixed circular buffer on the stack.
 
